@@ -36,7 +36,7 @@ attempts.sort(key=lambda attempt: attempt['score'])
 
 res = attempts[-1:][0]
 
-if res['score'] > 5:
-    print('\n')
-    print('message : ' + res['msg'])
-    print('clé : (a = %d; b = %d)' % (res['a'], res['b']))
+print('\n')
+print('score : %d' % (100 * res['score']/len(res['msg'])))
+print('message : %s' % res['msg'])
+print('clé : (a = %d; b = %d)' % (res['a'], res['b']))
