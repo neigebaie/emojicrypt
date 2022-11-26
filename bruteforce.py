@@ -31,6 +31,8 @@ for a in range(max_a):
         attempt = {'msg': ec.decrypt(enc_msg, a, b), 'a': a, 'b': b}
         attempt['score'] = score(attempt['msg'])
         attempts.append(attempt)
+        if (100 * attempt['score']/len(attempt['msg'])) > 10:
+            print(attempt['msg'])
 
 attempts.sort(key=lambda attempt: attempt['score'])
 
