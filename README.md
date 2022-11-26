@@ -1,4 +1,4 @@
-# Emoji Encryption ✨
+# Emojicrypt ✨
 Petit algorithme permettant d'encrypter une chaîne de caractère en une chaîne d'emojis.
 
 ## Liste des fonctionnalités à ajouter :
