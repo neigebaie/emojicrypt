@@ -1,5 +1,6 @@
-alpha_1="abcdefghijklmnopqrstuvwxyz'!?à "
+alpha_1="abcdefghijklmnopqrstuvwxyz'!?à \n"
 alpha_2=["🐒", "🦍", "🐶", "🐺", "🦊", "🦟", "🦝", "🐱", "🦁", "🐯", "🐴", "🦄", "🦌", "🦬", "🐮", "🐖", "🐐", "🐪", "🦒", "🐘", "🦏", "🦣", "🐀", "🦦", "🐼", "🦫", "🐇", "🦆", "🐋", "🐬", "🦭"]
+v = '1.0'
 
 def test_alpha():
 	if len(alpha_1) != len(alpha_2):
@@ -22,7 +23,7 @@ def encrypt(msg, a, b):
 		try:
 			c = (a * alpha_1.index(m) + (b + i)) % len(alpha_1)
 			enc_msg.append(alpha_2[c])
-			# i += 1
+			i += 1
 		except:
 			print("caractère \"" + m + "\" non trouvé !")
 
@@ -41,6 +42,6 @@ def decrypt(msg, a, b):
 	for c in msg:
 		m = a_1 * (alpha_2.index(c) - (b + i)) % len(alpha_1)
 		clear_msg.append(alpha_1[m])
-		# i += 1
+		i += 1
 
 	return "".join(clear_msg)
