@@ -251,69 +251,69 @@ int main() {
 
   uint8_t buf[Nb * Nb];
   emoji out[Nb * Nb];
-  // uint8_t key[] = {0xa0, 0x0a, 0x11, 0xff};
+  uint8_t key[] = {0xa0, 0x0a, 0x11, 0xff};
   // uint8_t key[] = {0xaa, 0xaa, 0xaa, 0xaa};
-  uint8_t key[] = {0x00, 0x00, 0x00, 0x00};
+  // uint8_t key[] = {0x00, 0x00, 0x00, 0x00};
 
-  // f_in = fopen("test_data/10Mio.dat", "rb");
-  // f_out = fopen("enc_file.txt", "wb");
+  f_in = fopen("test_data/1Kio.dat", "rb");
+  f_out = fopen("file.enc", "wb");
 
-  // if (f_in == NULL) {
-  //   fprintf(stderr, "Erreur d'ouverture du fichier d'entrée.\n");
-  //   return EXIT_FAILURE;
-  // }
+  if (f_in == NULL) {
+    fprintf(stderr, "Erreur d'ouverture du fichier d'entrée.\n");
+    return EXIT_FAILURE;
+  }
 
-  // if (f_out == NULL) {
-  //   fprintf(stderr, "Erreur d'ouverture du fichier de sortie.\n");
-  //   return EXIT_FAILURE;
-  // }
+  if (f_out == NULL) {
+    fprintf(stderr, "Erreur d'ouverture du fichier de sortie.\n");
+    return EXIT_FAILURE;
+  }
 
-  // fseek(f_in, 0L, SEEK_END);
-  // long sz = ftell(f_in);
-  // fseek(f_in, 0L, SEEK_SET);
-  // printf("size = %ld\n", sz);
-  // // fprintf(f_out, "EMOJICRYPT : %ld\n", sz); // FILE HEADER
+  fseek(f_in, 0L, SEEK_END);
+  long sz = ftell(f_in);
+  fseek(f_in, 0L, SEEK_SET);
+  printf("size = %ld\n", sz);
+  // fprintf(f_out, "EMOJICRYPT : %ld\n", sz); // FILE HEADER
 
-  // while (!feof(f_in)) {
-  //   buf[i] = getc(f_in);
-  //   i++;
-  //   if (i % (Nb * Nb) == 0) {
-  //     ec_cipher(buf, out, key);
-  //     for (j = 0; j < Nb * Nb; j++) {
-  //       fputs(out[j], f_out);
-  //       // fputs(" ", f_out);
-  //     }
-  //     // fputs("\n", f_out);
-  //     i = 0;
-  //     if (feof(f_in))
-  //       break;
-  //   }
-  // }
+  while (!feof(f_in)) {
+    buf[i] = getc(f_in);
+    i++;
+    if (i % (Nb * Nb) == 0) {
+      ec_cipher(buf, out, key);
+      for (j = 0; j < Nb * Nb; j++) {
+        fputs(out[j], f_out);
+        // fputs(" ", f_out);
+      }
+      fputs("\n", f_out);
+      i = 0;
+      if (feof(f_in))
+        break;
+    }
+  }
 
-  // i--;
-  // printf("i=%d\n", i);
+  i--;
+  printf("i=%d\n", i);
 
-  // if (i != 0) {
-  //   while (i % (Nb * Nb)) {
-  //     buf[i] = 0;
-  //     i++;
-  //   }
+  if (i != 0) {
+    while (i % (Nb * Nb)) {
+      buf[i] = 0;
+      i++;
+    }
 
-  //   ec_cipher(buf, out, key);
-  //   for (j = 0; j < Nb * Nb; j++) {
-  //     fputs(out[j], f_out);
-  //     // fputs(" ", f_out);
-  //   }
-  //   // fputs("\n", f_out);
-  // } else {
-  //   printf("Pas de padding :)\n");
-  // }
+    ec_cipher(buf, out, key);
+    for (j = 0; j < Nb * Nb; j++) {
+      fputs(out[j], f_out);
+      // fputs(" ", f_out);
+    }
+    // fputs("\n", f_out);
+  } else {
+    printf("Pas de padding :)\n");
+  }
 
-  // // fclose(f_in);
-  // fseek(f_in, 0L, SEEK_SET);
-  // fclose(f_out);
+  // fclose(f_in);
+  fseek(f_in, 0L, SEEK_SET);
+  fclose(f_out);
 
-  // printf("\nencryption completed!\n\n");
+  printf("\nencryption completed!\n\n");
 
   // decryption
 
@@ -327,7 +327,7 @@ int main() {
   char buf1[128];
   char buf2[128];
   int buf1_i = 0, buf2_i = 0;
-  f_enc = fopen("enc_file.txt", "rb");
+  f_enc = fopen("file.enc", "rb");
   f_clear = fopen("test3_out.dat", "wb");
 
   if (f_enc == NULL) {
@@ -374,7 +374,7 @@ int main() {
       if (feof(f_enc))
         printf("last block.\n");
       ec_inv_cipher(in, out_bin, key);
-      fwrite((const *)out_bin, sizeof(uint8_t), (size_t)Nb*Nb, f_clear);
+      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)Nb*Nb, f_clear);
       emoji_count = 0;
     }
   }
