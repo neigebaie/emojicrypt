@@ -7,8 +7,8 @@
 #include "emojiset.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #define Nb 4
 
@@ -245,6 +245,7 @@ uint8_t emoji_to_int(char *buf) {
 
 int main() {
   clock_t clck_enc_start = clock();
+  srand(time(NULL));
 
   FILE *f_in, *f_out;
   uint8_t i = 0, j, c;
@@ -255,7 +256,7 @@ int main() {
   // uint8_t key[] = {0xaa, 0xaa, 0xaa, 0xaa};
   // uint8_t key[] = {0x00, 0x00, 0x00, 0x00};
 
-  f_in = fopen("test_data/1Kio.dat", "rb");
+  f_in = fopen("input.txt", "rb");
   f_out = fopen("file.enc", "wb");
 
   if (f_in == NULL) {
@@ -294,10 +295,13 @@ int main() {
   printf("i=%d\n", i);
 
   if (i != 0) {
+    int padding_len = 0;
     while (i % (Nb * Nb)) {
-      buf[i] = 0;
+      buf[i] = rand() % 256;
       i++;
+      padding_len++;
     }
+    buf[(Nb * Nb) - 1] = padding_len;
 
     ec_cipher(buf, out, key);
     for (j = 0; j < Nb * Nb; j++) {
@@ -326,7 +330,7 @@ int main() {
   uint8_t out_bin[Nb * Nb];
   char buf1[128];
   char buf2[128];
-  int buf1_i = 0, buf2_i = 0;
+  int buf1_i = 0, buf2_i = 0, tmp = 0;
   f_enc = fopen("file.enc", "rb");
   f_clear = fopen("test3_out.dat", "wb");
 
@@ -345,17 +349,16 @@ int main() {
   while (!feof(f_enc)) {
     buf2_i = 0;
     fget_emoji(buf1, buf2, &buf1_i, &buf2_i, f_enc);
+
     if (buf1_i <= 4) {
       buf1[buf1_i] = '\0';
-      // in[emoji_count] = 0;
-      if ((in[emoji_count] = binary_search(0, 255, buf1)) >= 0)
-      // if ((in[emoji_count] = emoji_to_int(buf1)) >= 0)
+      if ((tmp = binary_search(0, 255, buf1)) >= 0) {
+        printf("%02x ", in[emoji_count]);
+        in[emoji_count] = tmp;
         emoji_count++;
-      else
+      } else {
         printf("v=%d : not found.\n", in[emoji_count]);
-      // for (int i = 0; i < buf2_i; i++) {
-      //     buf1[i] = buf2[i];
-      // }
+      }
       memcpy(buf1, buf2, buf2_i);
       buf1_i = buf2_i;
     } else {
@@ -363,18 +366,25 @@ int main() {
       buf1_i = 0;
       // printf("%s", buf1);
       // in[emoji_count] = 0;
-      if ((in[emoji_count] = binary_search(0, 255, buf1)) >= 0)
-      // if ((in[emoji_count] = emoji_to_int(buf1)) >= 0)
+      if ((tmp = binary_search(0, 255, buf1)) >= 0) {
+        printf("%02x ", in[emoji_count]);
+        in[emoji_count] = tmp;
         emoji_count++;
-      else
+      } else {
         printf("v=%d : not found.\n", in[emoji_count]);
+      }
     }
 
     if (emoji_count == Nb * Nb) {
-      if (feof(f_enc))
-        printf("last block.\n");
+      int padding_len = 0;
       ec_inv_cipher(in, out_bin, key);
-      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)Nb*Nb, f_clear);
+      if (feof(f_enc)) {
+        printf("last block.\n");
+        padding_len = out_bin[(Nb * Nb) - 1];
+      }
+      printf("\n");
+      print_block(out_bin);
+      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)(Nb * Nb - padding_len), f_clear);
       emoji_count = 0;
     }
   }
