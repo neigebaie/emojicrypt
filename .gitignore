@@ -1,1 +1,7 @@
 *.pyc
+emojicrypt
+emojiset
+*.enc
+*.dat
+*.png
+test

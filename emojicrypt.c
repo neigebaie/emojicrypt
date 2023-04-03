@@ -11,6 +11,7 @@
 #include <string.h>
 
 #define Nb 4
+#define ROUNDS 16
 
 const char vsel16[] = {0xef, 0xb8, 0x8f, 0x00};
 const char zwjoin[] = {0xe2, 0x80, 0x8d, 0x00};
@@ -87,6 +88,44 @@ void inv_sub_bytes(uint8_t *state) {
       state[Nb * i + j] = inv_s_box[state[Nb * i + j]];
     }
   }
+}
+
+/*
+ * Shifts rows (to the left)
+ */
+void shift_rows(uint8_t *block) {
+    uint8_t i, s, k, tmp;
+
+    for (i = 1; i < Nb; i++) {
+        for (s = 0; s < i; s++) {
+            tmp = block[Nb * i]; // first element of row i
+
+            for (k = 0; k < Nb - 1; k++) {
+                block[Nb * i + k] = block[Nb * i + k + 1];
+            }
+            
+            block[Nb * i + Nb - 1] = tmp;
+        }
+    }
+}
+
+/*
+ * Shifts rows (to the right)
+ */
+void inv_shift_rows(uint8_t *block) {
+    uint8_t i, s, k, tmp;
+
+    for (i = 1; i < Nb; i++) {
+        for (s = 0; s < i; s++) {
+            tmp = block[Nb * i + Nb - 1]; // last element of row i
+
+            for (k = Nb - 1; k > 0; k--) {
+                block[Nb * i + k] = block[Nb * i + k - 1];
+            }
+            
+            block[Nb * i] = tmp;
+        }
+    }
 }
 
 /*
@@ -193,17 +232,23 @@ void fget_emoji(char *buf1, char *buf2, int *buf1_i, int *buf2_i, FILE *file) {
 void ec_cipher(uint8_t *in, emoji *out, uint8_t *key) {
   uint8_t state[Nb * Nb]; // tableau de 4 x 4
 
-  uint8_t i, j;
+  uint8_t i, j, k;
+  // Copies input on state
   for (i = 0; i < Nb; i++) {
     for (j = 0; j < Nb; j++) {
       state[Nb * i + j] = in[Nb * i + j];
     }
   }
 
-  add_round_key(state, key);
+  for (k = 0; k < ROUNDS; k++) {
+    add_round_key(state, key);
 
-  sub_bytes(state);
+    sub_bytes(state);
 
+    shift_rows(state);
+  }
+
+  // Converts state to corresponding emojis
   for (i = 0; i < Nb; i++) {
     for (j = 0; j < Nb; j++) {
       for (uint8_t k = 0; k < 16; k++) {
@@ -218,16 +263,20 @@ void ec_cipher(uint8_t *in, emoji *out, uint8_t *key) {
  */
 void ec_inv_cipher(uint8_t *in, uint8_t *out, uint8_t *key) {
 
-  uint8_t i, j;
+  uint8_t i, j, k;
   for (i = 0; i < Nb * Nb; i++) {
     for (int k = 0; k < 256; k++) {
       out[i] = in[i];
     }
   }
 
-  inv_sub_bytes(out);
+  for (k = 0; k < ROUNDS; k++) {
+    inv_shift_rows(out);
 
-  add_round_key(out, key);
+    inv_sub_bytes(out);
+
+    add_round_key(out, key);
+  }
 }
 
 /*
@@ -400,6 +449,5 @@ int main() {
 }
 
 // TODO:
-// - padding (with random bytes + padding length on last byte)
 // - add shift rows
 // - add mix columns ?
