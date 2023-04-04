@@ -5,13 +5,22 @@
 
 #include "emojicrypt.h"
 #include "emojiset.h"
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define Nb 4
 #define ROUNDS 16
+
+/* global cmd flags: */
+static uint8_t o_enc = 0;
+static uint8_t o_dec = 0;
+char *o_in  = NULL;
+char *o_out = NULL;
+char *o_key = NULL;
 
 const char vsel16[] = {0xef, 0xb8, 0x8f, 0x00};
 const char zwjoin[] = {0xe2, 0x80, 0x8d, 0x00};
@@ -280,7 +289,7 @@ void ec_inv_cipher(uint8_t *in, uint8_t *out, uint8_t *key) {
 }
 
 /*
- * Very slow !
+ * Very slow ! Not used
  * Finds the emoji's corresponding value
  */
 uint8_t emoji_to_int(char *buf) {
@@ -292,21 +301,17 @@ uint8_t emoji_to_int(char *buf) {
   return -1;
 }
 
-int main() {
-  clock_t clck_enc_start = clock();
-  srand(time(NULL));
-
+int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
   FILE *f_in, *f_out;
   uint8_t i = 0, j, c;
 
   uint8_t buf[Nb * Nb];
   emoji out[Nb * Nb];
-  uint8_t key[] = {0xa0, 0x0a, 0x11, 0xff};
-  // uint8_t key[] = {0xaa, 0xaa, 0xaa, 0xaa};
-  // uint8_t key[] = {0x00, 0x00, 0x00, 0x00};
 
-  f_in = fopen("input.txt", "rb");
-  f_out = fopen("file.enc", "wb");
+  clock_t clck_enc_start = clock();
+
+  f_in = fopen(f_in_path, "rb");
+  f_out = fopen(f_out_path, "wb");
 
   if (f_in == NULL) {
     fprintf(stderr, "Erreur d'ouverture du fichier d'entrée.\n");
@@ -331,7 +336,6 @@ int main() {
       ec_cipher(buf, out, key);
       for (j = 0; j < Nb * Nb; j++) {
         fputs(out[j], f_out);
-        // fputs(" ", f_out);
       }
       fputs("\n", f_out);
       i = 0;
@@ -341,7 +345,7 @@ int main() {
   }
 
   i--;
-  printf("i=%d\n", i);
+  // printf("i=%d\n", i);
 
   if (i != 0) {
     int padding_len = 0;
@@ -355,24 +359,20 @@ int main() {
     ec_cipher(buf, out, key);
     for (j = 0; j < Nb * Nb; j++) {
       fputs(out[j], f_out);
-      // fputs(" ", f_out);
     }
-    // fputs("\n", f_out);
   } else {
-    printf("Pas de padding :)\n");
+    // printf("Pas de padding :)\n");
   }
 
-  // fclose(f_in);
-  fseek(f_in, 0L, SEEK_SET);
+  fclose(f_in);
+  // fseek(f_in, 0L, SEEK_SET);
   fclose(f_out);
 
-  printf("\nencryption completed!\n\n");
+  clock_t clck_enc_end = clock();
+  printf("encryption time : %.2lfms (%.2lfmbps)\n", 1000 * (double)(clck_enc_end - clck_enc_start) / CLOCKS_PER_SEC, ((double)sz/(1000*1000)) / ((double)(clck_enc_end - clck_enc_start) / CLOCKS_PER_SEC));
+}
 
-  // decryption
-
-  printf("\ndecryption started!\n\n");
-
-
+int decrypt_file(char *f_enc_path, char *f_clear_path, uint8_t *key) {
   FILE *f_enc, *f_clear;
   uint8_t emoji_count = 0;
   uint8_t in[Nb * Nb];
@@ -380,8 +380,11 @@ int main() {
   char buf1[128];
   char buf2[128];
   int buf1_i = 0, buf2_i = 0, tmp = 0;
-  f_enc = fopen("file.enc", "rb");
-  f_clear = fopen("test3_out.dat", "wb");
+
+  clock_t clck_dec_start = clock();
+
+  f_enc = fopen(f_enc_path, "rb");
+  f_clear = fopen(f_clear_path, "wb");
 
   if (f_enc == NULL) {
     fprintf(stderr, "Erreur d'ouverture du fichier encrypté.\n");
@@ -392,8 +395,6 @@ int main() {
     fprintf(stderr, "Erreur d'ouverture du fichier decrypté.\n");
     return EXIT_FAILURE;
   }
-
-  // clock_t clck_dec_start = clock();
 
   while (!feof(f_enc)) {
     buf2_i = 0;
@@ -407,6 +408,7 @@ int main() {
         emoji_count++;
       } else {
         printf("v=%d : not found.\n", in[emoji_count]);
+        return EXIT_FAILURE;
       }
       memcpy(buf1, buf2, buf2_i);
       buf1_i = buf2_i;
@@ -421,6 +423,7 @@ int main() {
         emoji_count++;
       } else {
         printf("v=%d : not found.\n", in[emoji_count]);
+        return EXIT_FAILURE;
       }
     }
 
@@ -438,16 +441,84 @@ int main() {
     }
   }
 
-  // clock_t clck_dec_end = clock();
-
-  // printf("encryption time : %.2lfms (%.2lfmbps)\n", 1000 * (double)(clck_dec_start - clck_enc_start) / CLOCKS_PER_SEC, ((double)sz/(1000*1000)) / ((double)(clck_dec_start - clck_enc_start) / CLOCKS_PER_SEC));
-  // printf("decryption time : %.2lfms\n", 1000 * (double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC); // ((double)sz/(1000*1000)) / ((double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC)
   fclose(f_enc);
   fclose(f_clear);
+
+  clock_t clck_dec_end = clock();
+  printf("decryption time : %.2lfms\n", 1000 * (double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC); // ((double)sz/(1000*1000)) / ((double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC)
+}
+
+int main(int argc, char *argv[]) {
+  int opt;
+  bool flag_enc = false;
+  bool flag_dec = false;
+
+  while ((opt = getopt(argc, argv, "dehk:i:o:")) != EOF) {
+    switch (opt) {
+      case 'e': /* encryption mode */
+        o_enc++;
+        break;
+      case 'd': /* decryption mode */
+        o_dec++;
+        break;
+      case 'i': /* input file */
+        o_in = optarg;
+        break;
+      case 'o': /* output file */
+        o_out = optarg;
+        break;
+      case 'k': /* key */
+        o_key = optarg;
+        break;
+      case 'h': /* help */
+        helpme(argv[0]);
+        return EXIT_SUCCESS;
+        break;
+      default:
+        fprintf(stderr, "Usage: %s [-e] [-d] -i input -o output -k key\n", argv[0]);
+        return 1;
+    }
+  }
+
+  if (o_enc && o_dec) {
+    fprintf (stderr, "-e and -d flags are incompatible.\n");
+    return EXIT_FAILURE;
+  }
+
+  if (!o_in) {
+    fprintf (stderr, "-i is required.\n");
+    return EXIT_FAILURE;
+  }
+
+  srand(time(NULL));
+
+  if (o_enc && o_key && o_in && o_out) {
+    encrypt_file(o_in, o_out, o_key);
+  } else if (o_dec && o_key && o_in && o_out) {
+    if (!decrypt_file(o_in, o_out, o_key))
+      printf("Decryption réussie!\n");
+    else
+      printf("Le fichier encrypté n'est pas valide!\n");
+  }
 
   return EXIT_SUCCESS;
 }
 
+static int helpme(char *argv_0)
+{
+  printf("Emojicrypt https://github.com/neigebaie/emojicrypt\n\n\
+encrypt a file:	%s -e -i input -o output -k key\n\
+decrypt a file:	%s -d -i input -o output -k key\n\n\
+options:", argv_0, argv_0);
+  printf("\n\
+  -d      encryption mode\n\
+  -e      decryption mode\n\
+  -h      this help page\n\
+  -i file input file\n\
+  -k      the key used for encryption/decryption\n\
+  -o file output file\n");
+  return 0;
+}
+
 // TODO:
-// - add shift rows
 // - add mix columns ?
