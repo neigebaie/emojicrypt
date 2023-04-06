@@ -5,7 +5,7 @@ Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne 
 
 ## Compilation
 ```
-gcc -o emojicrypt emojiset.c emojicrypt.c
+make
 ```
 
 ## Utilisation
