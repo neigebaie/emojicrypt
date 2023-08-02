@@ -1,6 +1,6 @@
 CC=gcc
 # CFLAGS=-Wall -Werror -g
-CFLAGS=-Wall
+CFLAGS=-Wall -pg
 SRC=emojiset.c emojicrypt.c
 OBJ=$(SRC:.c=.o)
 

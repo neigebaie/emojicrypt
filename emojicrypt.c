@@ -11,16 +11,18 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define Nb 4
 #define ROUNDS 16
+
+#define MAX_KEYSTR_LENGTH 64
 
 /* global cmd flags: */
 static uint8_t o_enc = 0;
 static uint8_t o_dec = 0;
 char *o_in  = NULL;
 char *o_out = NULL;
-char *o_key = NULL;
 
 const char vsel16[] = {0xef, 0xb8, 0x8f, 0x00};
 const char zwjoin[] = {0xe2, 0x80, 0x8d, 0x00};
@@ -70,7 +72,7 @@ void add_round_key(uint8_t *state, uint8_t *key) {
   uint8_t i, j;
   for (i = 0; i < Nb; i++) {
     for (j = 0; j < Nb; j++) {
-      state[Nb * i + j] ^= *key;
+      state[Nb * i + j] ^= key[Nb * i + j];
     }
   }
 }
@@ -194,6 +196,22 @@ void print_text_block(uint8_t *block) {
 }
 
 /*
+ * Used for debugging, prints the key (hex)
+ */
+void print_key(uint8_t *key) {
+  // printf("keystr=");
+  // for (int i = 0; i < Nb*Nb; i++) {
+  //   printf("%c", key[i]);
+  // }
+  // printf("\n");
+
+  printf("key=");
+  for (int i = 0; i < Nb*Nb; i++) {
+    printf("%02x ", key[i]);
+  }
+  printf("\n");
+}
+/*
  * Reads an utf8 character from the file's stream (between 1 and 4 bytes)
  */
 int fget_utf8(char *buf, int *start_i, int max, FILE* file) {
@@ -260,9 +278,9 @@ void ec_cipher(uint8_t *in, emoji *out, uint8_t *key) {
   // Converts state to corresponding emojis
   for (i = 0; i < Nb; i++) {
     for (j = 0; j < Nb; j++) {
-      for (uint8_t k = 0; k < 16; k++) {
-        out[Nb * i + j][k] = emojiset[state[Nb * i + j]][k];
-      }
+      char *src = emojiset[state[Nb * i + j]];
+      size_t size = strlen(src) + 1; // include null terminator
+      memcpy(out[Nb * i + j], src, size);
     }
   }
 }
@@ -272,7 +290,7 @@ void ec_cipher(uint8_t *in, emoji *out, uint8_t *key) {
  */
 void ec_inv_cipher(uint8_t *in, uint8_t *out, uint8_t *key) {
 
-  uint8_t i, j, k;
+  uint8_t i, k;
   for (i = 0; i < Nb * Nb; i++) {
     for (int k = 0; k < 256; k++) {
       out[i] = in[i];
@@ -303,7 +321,7 @@ uint8_t emoji_to_int(char *buf) {
 
 int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
   FILE *f_in, *f_out;
-  uint8_t i = 0, j, c;
+  uint8_t i = 0, j;
 
   uint8_t buf[Nb * Nb];
   emoji out[Nb * Nb];
@@ -314,12 +332,12 @@ int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
   f_out = fopen(f_out_path, "wb");
 
   if (f_in == NULL) {
-    fprintf(stderr, "Erreur d'ouverture du fichier d'entrée.\n");
+    fprintf(stderr, "🚧 Failed to open input file : %s\n", f_in_path);
     return EXIT_FAILURE;
   }
 
   if (f_out == NULL) {
-    fprintf(stderr, "Erreur d'ouverture du fichier de sortie.\n");
+    fprintf(stderr, "🚧 Failed to open output file : %s\n", f_out_path);
     return EXIT_FAILURE;
   }
 
@@ -370,10 +388,12 @@ int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
 
   clock_t clck_enc_end = clock();
   printf("encryption time : %.2lfms (%.2lfmbps)\n", 1000 * (double)(clck_enc_end - clck_enc_start) / CLOCKS_PER_SEC, ((double)sz/(1000*1000)) / ((double)(clck_enc_end - clck_enc_start) / CLOCKS_PER_SEC));
+
+  return EXIT_SUCCESS;
 }
 
-int decrypt_file(char *f_enc_path, char *f_clear_path, uint8_t *key) {
-  FILE *f_enc, *f_clear;
+int decrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
+  FILE *f_in, *f_out;
   uint8_t emoji_count = 0;
   uint8_t in[Nb * Nb];
   uint8_t out_bin[Nb * Nb];
@@ -383,32 +403,31 @@ int decrypt_file(char *f_enc_path, char *f_clear_path, uint8_t *key) {
 
   clock_t clck_dec_start = clock();
 
-  f_enc = fopen(f_enc_path, "rb");
-  f_clear = fopen(f_clear_path, "wb");
+  f_in = fopen(f_in_path, "rb");
+  f_out = fopen(f_out_path, "wb");
 
-  if (f_enc == NULL) {
-    fprintf(stderr, "Erreur d'ouverture du fichier encrypté.\n");
+  if (f_in == NULL) {
+    fprintf(stderr, "🚧 Failed to open input file : %s\n", f_in_path);
     return EXIT_FAILURE;
   }
 
-  if (f_clear == NULL) {
-    fprintf(stderr, "Erreur d'ouverture du fichier decrypté.\n");
+  if (f_out == NULL) {
+    fprintf(stderr, "🚧 Failed to open output file : %s\n", f_out_path);
     return EXIT_FAILURE;
   }
 
-  while (!feof(f_enc)) {
+  while (!feof(f_in)) {
     buf2_i = 0;
-    fget_emoji(buf1, buf2, &buf1_i, &buf2_i, f_enc);
+    fget_emoji(buf1, buf2, &buf1_i, &buf2_i, f_in);
 
     if (buf1_i <= 4) {
       buf1[buf1_i] = '\0';
       if ((tmp = binary_search(0, 255, buf1)) >= 0) {
-        printf("%02x ", in[emoji_count]);
+        // printf("%02x ", in[emoji_count]);
         in[emoji_count] = tmp;
         emoji_count++;
-      } else {
-        printf("v=%d : not found.\n", in[emoji_count]);
-        return EXIT_FAILURE;
+      } else { // unknown emoji or \n
+        // printf("v1=%d : not found.\n", in[emoji_count]);
       }
       memcpy(buf1, buf2, buf2_i);
       buf1_i = buf2_i;
@@ -418,40 +437,56 @@ int decrypt_file(char *f_enc_path, char *f_clear_path, uint8_t *key) {
       // printf("%s", buf1);
       // in[emoji_count] = 0;
       if ((tmp = binary_search(0, 255, buf1)) >= 0) {
-        printf("%02x ", in[emoji_count]);
+        // printf("%02x ", in[emoji_count]);
         in[emoji_count] = tmp;
         emoji_count++;
-      } else {
-        printf("v=%d : not found.\n", in[emoji_count]);
-        return EXIT_FAILURE;
+      } else { // unknown emoji or \n
+        // printf("v2=%d : not found.\n", in[emoji_count]);
       }
     }
 
     if (emoji_count == Nb * Nb) {
       int padding_len = 0;
       ec_inv_cipher(in, out_bin, key);
-      if (feof(f_enc)) {
-        printf("last block.\n");
+      if (feof(f_in)) {
         padding_len = out_bin[(Nb * Nb) - 1];
+        // printf("last block. padding_len=%d\n", padding_len);
       }
-      printf("\n");
-      print_block(out_bin);
-      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)(Nb * Nb - padding_len), f_clear);
+      // printf("\n");
+      // print_block(out_bin);
+      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)(Nb * Nb - padding_len), f_out);
       emoji_count = 0;
     }
   }
 
-  fclose(f_enc);
-  fclose(f_clear);
+  fclose(f_in);
+  fclose(f_out);
 
   clock_t clck_dec_end = clock();
   printf("decryption time : %.2lfms\n", 1000 * (double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC); // ((double)sz/(1000*1000)) / ((double)(clck_dec_end - clck_dec_start) / CLOCKS_PER_SEC)
+
+  return EXIT_SUCCESS;
+}
+
+/*
+ * Converts keytext given in the command line to key bytes
+ * Not very strong tho
+ */
+int keytext_to_key(char *keytext, uint8_t *key) {
+
+  for (int i = 0; i < Nb*Nb; i++) {
+    key[i] = keytext[i % strlen(keytext)] + i;
+  }
+
+  for (int i = 0; i < strlen(keytext); i++) {
+    key[i % (Nb*Nb)] += (uint8_t)keytext[i];
+  }
+  
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
   int opt;
-  bool flag_enc = false;
-  bool flag_dec = false;
 
   while ((opt = getopt(argc, argv, "dehk:i:o:")) != EOF) {
     switch (opt) {
@@ -467,9 +502,6 @@ int main(int argc, char *argv[]) {
       case 'o': /* output file */
         o_out = optarg;
         break;
-      case 'k': /* key */
-        o_key = optarg;
-        break;
       case 'h': /* help */
         helpme(argv[0]);
         return EXIT_SUCCESS;
@@ -481,24 +513,55 @@ int main(int argc, char *argv[]) {
   }
 
   if (o_enc && o_dec) {
-    fprintf (stderr, "-e and -d flags are incompatible.\n");
+    fprintf(stderr, "🚧 Encryption (-e) and decryption (-d) flags are incompatible.\n");
     return EXIT_FAILURE;
   }
 
   if (!o_in) {
-    fprintf (stderr, "-i is required.\n");
+    fprintf(stderr, "🚧 An input file (-i) is required.\n");
     return EXIT_FAILURE;
+  }
+
+  if (!o_enc && !o_dec) {
+    fprintf(stderr, "🚧 Encryption (-e) or decryption (-d) flag is required.\n");
+    return EXIT_FAILURE;
+  }
+
+  char keystr[MAX_KEYSTR_LENGTH];
+  uint8_t key[Nb*Nb];
+
+  if ((o_enc || o_dec)) {
+    char *input = getpass("🔑 Enter your key: ");
+
+    if (strlen(input) >= MAX_KEYSTR_LENGTH - 1) {
+      fprintf(stderr, "🚧 The key is too long, the max size is %d.\n", MAX_KEYSTR_LENGTH - 1);
+      return EXIT_FAILURE;
+    }
+
+    strncpy(keystr, input, sizeof(keystr));
+    
+    // Clear the original input from memory for security
+    memset(input, 0, strlen(input));
   }
 
   srand(time(NULL));
 
-  if (o_enc && o_key && o_in && o_out) {
-    encrypt_file(o_in, o_out, o_key);
-  } else if (o_dec && o_key && o_in && o_out) {
-    if (!decrypt_file(o_in, o_out, o_key))
-      printf("Decryption réussie!\n");
+  keytext_to_key(keystr, key);
+  // print_key(key);
+
+  if (o_enc && o_in && o_out) {
+    if (!encrypt_file(o_in, o_out, key))
+      printf("File successfully encrypted! : %s -> 🔒%s\n", o_in, o_out);
     else
-      printf("Le fichier encrypté n'est pas valide!\n");
+      fprintf(stderr, "🚧 An error occured during encryption!\n");
+  } else if (o_dec && o_in && o_out) {
+    if (!decrypt_file(o_in, o_out, key)) {
+      printf("Success! : 🔒%s -> %s\n", o_in, o_out);
+      return EXIT_SUCCESS;
+    } else {
+      fprintf(stderr, "🚧 An error occured during decryption!\n");
+      return EXIT_FAILURE;
+    }
   }
 
   return EXIT_SUCCESS;
@@ -511,14 +574,11 @@ encrypt a file:	%s -e -i input -o output -k key\n\
 decrypt a file:	%s -d -i input -o output -k key\n\n\
 options:", argv_0, argv_0);
   printf("\n\
-  -d      encryption mode\n\
-  -e      decryption mode\n\
+  -d      decryption mode\n\
+  -e      encryption mode\n\
   -h      this help page\n\
   -i file input file\n\
-  -k      the key used for encryption/decryption\n\
   -o file output file\n");
+
   return 0;
 }
-
-// TODO:
-// - add mix columns ?

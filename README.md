@@ -1,7 +1,7 @@
 # Emojicrypt ✨
 Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne d'emojis**.
 
-![main](https://cdn.discordapp.com/attachments/547909957711036429/1051988753557749861/demo.png)
+![main](https://cdn.discordapp.com/attachments/547909957711036429/1136436643247689878/image.png)
 
 ## Compilation
 ```
@@ -11,26 +11,27 @@ make
 ## Utilisation
 Encryption :
 ```
-emojicrypt -e -i input -o output -k key
+ 🐯   | ./emojicrypt -e -i input.txt -o output.enc           
+🔑 Enter your key:
 ```
 
 Decryption :
 ```
-emojicrypt -d -i input -o output -k key
+ 🐯   | ./emojicrypt -d -i input.txt -o output.enc           
+🔑 Enter your key:
 ```
 
 Toutes les options :
 ```
-  -d      encryption mode
-  -e      decryption mode
-  -h      this help page
-  -i file input file
-  -k      the key used for encryption/decryption
-  -o file output file
+  -d        decryption mode
+  -e        encryption mode
+  -h        this help page
+  -i file   input file
+  -o file   output file
 ```
 
 ## Liste des fonctionnalités à ajouter
  - Mélange des colonnes du bloc
- - Adaptation en outil CLI (ligne de commande)
  - Support du mode CBC
+ - Nom de fichier de sortie automatique si non fourni 
 
