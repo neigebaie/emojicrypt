@@ -488,6 +488,11 @@ int keytext_to_key(char *keytext, uint8_t *key) {
 int main(int argc, char *argv[]) {
   int opt;
 
+  #ifdef __WINDOWS__
+  printf("WINDOWS BUILD: If you see weird characters it's because emojis aren't \
+supported by Windows' cmd.\n\n");
+  #endif
+
   while ((opt = getopt(argc, argv, "dehk:i:o:")) != EOF) {
     switch (opt) {
       case 'e': /* encryption mode */
@@ -531,7 +536,17 @@ int main(int argc, char *argv[]) {
   uint8_t key[Nb*Nb];
 
   if ((o_enc || o_dec)) {
-    char *input = getpass("🔑 Enter your key: ");
+    #ifdef __LINUX__
+      char *input = getpass("🔑 Enter your key: ");
+    #else
+      char input[MAX_KEYSTR_LENGTH];
+  
+      printf("Enter your key: ");
+      if (!fgets(input, sizeof(input), stdin)) {
+        fprintf(stderr, "The key is too long, the max size is %d.\n", MAX_KEYSTR_LENGTH - 1);
+        return EXIT_FAILURE;
+      }
+    #endif
 
     if (strlen(input) >= MAX_KEYSTR_LENGTH - 1) {
       fprintf(stderr, "🚧 The key is too long, the max size is %d.\n", MAX_KEYSTR_LENGTH - 1);
