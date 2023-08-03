@@ -533,7 +533,13 @@ supported by Windows' cmd.\n\n");
   }
 
   char keystr[MAX_KEYSTR_LENGTH];
+  for (int i = 0; i < MAX_KEYSTR_LENGTH; i++) {
+    keystr[i] = 0;
+  }
   uint8_t key[Nb*Nb];
+  for (int i = 0; i < Nb*Nb; i++) {
+    key[i] = 0;
+  }
 
   if ((o_enc || o_dec)) {
     #ifdef __LINUX__
@@ -545,6 +551,11 @@ supported by Windows' cmd.\n\n");
       if (!fgets(input, sizeof(input), stdin)) {
         fprintf(stderr, "The key is too long, the max size is %d.\n", MAX_KEYSTR_LENGTH - 1);
         return EXIT_FAILURE;
+      } else {
+        size_t len = strcspn(input, "\n");
+        for (int i = len; i < MAX_KEYSTR_LENGTH; i++) {
+          input[i] = '\0';
+        }
       }
     #endif
 
@@ -552,7 +563,7 @@ supported by Windows' cmd.\n\n");
       fprintf(stderr, "🚧 The key is too long, the max size is %d.\n", MAX_KEYSTR_LENGTH - 1);
       return EXIT_FAILURE;
     }
-
+    
     strncpy(keystr, input, sizeof(keystr));
     
     // Clear the original input from memory for security
