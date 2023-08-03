@@ -3,13 +3,23 @@
  * @author neigebaie
  */
  
+#include <getopt.h>
+#include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <time.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
 #include "emojiset.h"
-#include "AES/aes.h"
+
+
+#define Nb 4
+#define ROUNDS 16
+
+#define MAX_KEYSTR_LENGTH 64
+
 
 uint8_t *aes_init(size_t key_size);
 

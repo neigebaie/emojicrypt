@@ -4,19 +4,6 @@
  */
 
 #include "emojicrypt.h"
-#include "emojiset.h"
-#include <getopt.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#define Nb 4
-#define ROUNDS 16
-
-#define MAX_KEYSTR_LENGTH 64
 
 /* global cmd flags: */
 static uint8_t o_enc = 0;
