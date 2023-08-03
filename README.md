@@ -16,13 +16,13 @@ make
 ## Utilisation
 Encryption :
 ```
- 🐯   | ./emojicrypt -e -i input.txt -o output.enc           
+ 🐯   | ./emojicrypt -e -i example.txt -o example.enc           
 🔑 Enter your key:
 ```
 
 Decryption :
 ```
- 🐯   | ./emojicrypt -d -i input.txt -o output.enc           
+ 🐯   | ./emojicrypt -d -i example.enc -o example_out.txt           
 🔑 Enter your key:
 ```
 
