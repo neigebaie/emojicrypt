@@ -3,7 +3,12 @@ Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne 
 
 ![main](https://cdn.discordapp.com/attachments/547909957711036429/1136436643247689878/image.png)
 
-## Compilation
+## Installation
+### Téléchargement
+[Lien de téléchargement](https://github.com/neigebaie/emojicrypt/releases/latest)
+### Compilation
+1. clone this repo
+2. run make command
 ```
 make
 ```
