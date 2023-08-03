@@ -510,11 +510,15 @@ supported by Windows' cmd.\n\n");
       case 'h': /* help */
         helpme(argv[0]);
         return EXIT_SUCCESS;
-        break;
       default:
         fprintf(stderr, "Usage: %s [-e] [-d] -i input -o output -k key\n", argv[0]);
         return 1;
     }
+  }
+  
+  if (argc == 1) {
+    helpme(argv[0]);
+    return EXIT_SUCCESS;
   }
 
   if (o_enc && o_dec) {
@@ -524,6 +528,11 @@ supported by Windows' cmd.\n\n");
 
   if (!o_in) {
     fprintf(stderr, "🚧 An input file (-i) is required.\n");
+    return EXIT_FAILURE;
+  }
+
+  if (!o_out) {
+    fprintf(stderr, "🚧 An output file (-o) is required.\n");
     return EXIT_FAILURE;
   }
 
