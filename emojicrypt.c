@@ -331,31 +331,39 @@ int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
   fseek(f_in, 0L, SEEK_END);
   long sz = ftell(f_in);
   fseek(f_in, 0L, SEEK_SET);
-  printf("size = %ld\n", sz);
+  printf("File size = %ld\n", sz);
   // fprintf(f_out, "EMOJICRYPT : %ld\n", sz); // FILE HEADER
 
   while (!feof(f_in)) {
     buf[i] = getc(f_in);
+    // printf("%02x ", buf[i]);
     i++;
-    if (i % (Nb * Nb) == 0) {
+    if (i % (Nb * Nb) == 0 && !feof(f_in)) {
       ec_cipher(buf, out, key);
       for (j = 0; j < Nb * Nb; j++) {
         fputs(out[j], f_out);
       }
       fputs("\n", f_out);
+      // printf("<EOL>\n");
       i = 0;
     }
   }
 
-  i--;
+  // i : 0 -> 15
+  // data = 17 -> i =  2 -> padding = 15 -> 1 2 ... 15
+  // data = 16 -> i =  1 -> padding = 16 -> 0 1 ... 15
+  // data = 15 -> i =  0 -> padding = 1 -> 15
+  // data = 14 -> i = 15 -> padding = 2 -> 14 15
 
-  int padding_len = 0;
-  while (i < (Nb * Nb)) {
-    // printf("i=%d\n", i);
-    buf[i] = rand() % 256;
-    i++;
-    padding_len++;
+  int padding_len = ((Nb*Nb-i)%(Nb*Nb)) + 1;
+  // printf("padding_len = %d\n", padding_len);
+
+  for (j = Nb*Nb - padding_len; j < Nb*Nb; j++) {
+    buf[j] = rand() % 256;
+    // printf("%02x ", buf[j]);
   }
+  // printf("\n");
+
   buf[(Nb * Nb) - 1] = padding_len;
 
   ec_cipher(buf, out, key);
