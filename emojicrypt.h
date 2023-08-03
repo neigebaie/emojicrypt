@@ -12,6 +12,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef __WINDOWS__
+#include <windows.h>
+#endif
+
 #include "emojiset.h"
 
 

@@ -344,29 +344,23 @@ int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
       }
       fputs("\n", f_out);
       i = 0;
-      if (feof(f_in))
-        break;
     }
   }
 
   i--;
-  // printf("i=%d\n", i);
 
-  if (i != 0) {
-    int padding_len = 0;
-    while (i % (Nb * Nb)) {
-      buf[i] = rand() % 256;
-      i++;
-      padding_len++;
-    }
-    buf[(Nb * Nb) - 1] = padding_len;
+  int padding_len = 0;
+  while (i < (Nb * Nb)) {
+    // printf("i=%d\n", i);
+    buf[i] = rand() % 256;
+    i++;
+    padding_len++;
+  }
+  buf[(Nb * Nb) - 1] = padding_len;
 
-    ec_cipher(buf, out, key);
-    for (j = 0; j < Nb * Nb; j++) {
-      fputs(out[j], f_out);
-    }
-  } else {
-    // printf("Pas de padding :)\n");
+  ec_cipher(buf, out, key);
+  for (j = 0; j < Nb * Nb; j++) {
+    fputs(out[j], f_out);
   }
 
   fclose(f_in);
@@ -380,7 +374,7 @@ int encrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
 }
 
 int decrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
-  FILE *f_in, *f_out;
+  FILE *f_in, *f_out = NULL;
   uint8_t emoji_count = 0;
   uint8_t in[Nb * Nb];
   uint8_t out_bin[Nb * Nb];
@@ -391,15 +385,9 @@ int decrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
   clock_t clck_dec_start = clock();
 
   f_in = fopen(f_in_path, "rb");
-  f_out = fopen(f_out_path, "wb");
 
   if (f_in == NULL) {
     fprintf(stderr, "🚧 Failed to open input file : %s\n", f_in_path);
-    return EXIT_FAILURE;
-  }
-
-  if (f_out == NULL) {
-    fprintf(stderr, "🚧 Failed to open output file : %s\n", f_out_path);
     return EXIT_FAILURE;
   }
 
@@ -433,17 +421,60 @@ int decrypt_file(char *f_in_path, char *f_out_path, uint8_t *key) {
     }
 
     if (emoji_count == Nb * Nb) {
-      int padding_len = 0;
       ec_inv_cipher(in, out_bin, key);
-      if (feof(f_in)) {
-        padding_len = out_bin[(Nb * Nb) - 1];
-        // printf("last block. padding_len=%d\n", padding_len);
-      }
-      // printf("\n");
+      
       // print_block(out_bin);
-      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)(Nb * Nb - padding_len), f_out);
+      if (f_out == NULL) {
+        f_out = fopen(f_out_path, "wb");
+
+        if (f_out == NULL) {
+          fprintf(stderr, "🚧 Failed to open output file : %s\n", f_out_path);
+          fclose(f_in);
+          return EXIT_FAILURE;
+        }
+      }
+      fwrite((char *)out_bin, sizeof(uint8_t), (size_t)(Nb * Nb), f_out);
       emoji_count = 0;
     }
+  }
+
+  if (f_out != NULL) {
+    int padding_len = out_bin[(Nb * Nb) - 1];
+    
+    fprintf(stderr, "🚧 Padding = %d\n", padding_len);
+
+    if (padding_len > Nb * Nb) {
+      fprintf(stderr, "🚧 Padding larger than %d, the encrypted file might be corrupted.\n", Nb * Nb);
+      fclose(f_out);
+      return EXIT_FAILURE;
+    }
+    fseek(f_out, -padding_len, SEEK_END);
+    // printf("last block. padding_len=%d\n", padding_len);
+
+    #ifdef __WINDOWS__ // For Windows systems
+      HANDLE handle = (HANDLE)_get_osfhandle(_fileno(f_out));
+      if (handle == INVALID_HANDLE_VALUE) {
+        printf("Error getting file handle.\n");
+        fclose(f_out);
+        return EXIT_FAILURE;
+      }
+      if (!SetEndOfFile(handle)) {
+        printf("Error truncating the file.\n");
+        fclose(f_out);
+        return EXIT_FAILURE;
+      }
+    #else // For POSIX systems
+      if (ftruncate(fileno(f_out), ftell(f_out)) != 0) {
+        fprintf(stderr, "🚧 Error truncating the file.");
+        fclose(f_out);
+        return EXIT_FAILURE;
+      }
+    #endif
+
+  } else {
+    fprintf(stderr, "🚧 There was no data to decrypt. Please verify input file.");
+    fclose(f_in);
+    return EXIT_FAILURE;
   }
 
   fclose(f_in);
