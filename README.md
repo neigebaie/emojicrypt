@@ -1,4 +1,7 @@
 # Emojicrypt ✨
+
+<img alt="language" src="https://img.shields.io/badge/Lang-C-blue.svg"> <img alt="version" src="https://img.shields.io/badge/Version-1.0.3-green.svg">
+
 Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne d'emojis**.
 
 ![main](https://cdn.discordapp.com/attachments/547909957711036429/1136436643247689878/image.png)
