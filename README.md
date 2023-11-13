@@ -2,13 +2,13 @@
 
 <img alt="language" src="https://img.shields.io/badge/Lang-C-blue.svg"> <img alt="version" src="https://img.shields.io/badge/Version-1.0.3-green.svg">
 
-Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne d'emojis**.
+Fun algorithm allowing to encrypt any file into a **string of emojis**. 
 
-![main](https://cdn.discordapp.com/attachments/547909957711036429/1136436643247689878/image.png)
+[![asciicast](https://asciinema.org/a/620762.svg)](https://asciinema.org/a/620762)
 
 ## Installation
-### Téléchargement
-[Lien de téléchargement](https://github.com/neigebaie/emojicrypt/releases/latest)
+### Download
+[Download link](https://github.com/neigebaie/emojicrypt/releases/latest)
 ### Compilation
 1. clone this repo
 2. run make command
@@ -16,20 +16,20 @@ Petit algorithme permettant d'encrypter n'importe quel fichier en une **chaîne 
 make
 ```
 
-## Utilisation
-Encryption :
+## Usage
+Encryption:
 ```
  🐯   | ./emojicrypt -e -i example.txt -o example.enc           
 🔑 Enter your key:
 ```
 
-Decryption :
+Decryption:
 ```
  🐯   | ./emojicrypt -d -i example.enc -o example_out.txt           
 🔑 Enter your key:
 ```
 
-Toutes les options :
+Available flags:
 ```
   -d        decryption mode
   -e        encryption mode
@@ -38,8 +38,8 @@ Toutes les options :
   -o file   output file
 ```
 
-## Liste des fonctionnalités à ajouter
- - Mélange des colonnes du bloc
- - Support du mode CBC
- - Nom de fichier de sortie automatique si non fourni 
+## List of features to add
+- Mixing the columns of the block
+- CBC mode support
+- Automatic output filename if not provided
 
